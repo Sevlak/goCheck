@@ -3,7 +3,26 @@ package main
 import (
 	"encoding/xml"
 	"fmt"
+	"net/http"
+	"sync"
 )
+
+type Client struct {
+	*http.Client
+}
+
+func (c *Client) checkUrl(pattern, action string, status chan string, wg *sync.WaitGroup) {
+	defer wg.Done()
+	resp, err := c.Get("https://" + pattern)
+	if err != nil {
+		status <- fmt.Sprintf("%s;%s;%s;%s", pattern, "TIMEOUT", "TIMEOUT", action)
+		return
+	}
+	defer resp.Body.Close()
+
+	found := resp.Request.URL.String()
+	status <- fmt.Sprintf("%s;%s;%s;%s", pattern, resp.Status, found, action)
+}
 
 type Rules struct {
 	XMLName xml.Name `xml:"rules"`
