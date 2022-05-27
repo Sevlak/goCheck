@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/xml"
 	"flag"
 	"fmt"
@@ -16,7 +17,7 @@ var file string
 var wg sync.WaitGroup
 
 func init() {
-	flag.IntVar(&timeout, "timeout", 60, "sets the timeout for the request")
+	flag.IntVar(&timeout, "timeout", 60, "sets the timeout for the request in seconds")
 	flag.StringVar(&file, "filename", "", "sspecifies the .xml file to be checked")
 }
 
@@ -24,7 +25,7 @@ func main() {
 	flag.Parse()
 
 	if file == "" {
-		fmt.Fprint(os.Stderr, "Missing filename flag. Use -filename [filename].")
+		fmt.Fprint(os.Stderr, "Missing filename flag. Use -filename [filename].\n")
 		os.Exit(2)
 	}
 
@@ -42,9 +43,7 @@ func main() {
 	wg.Wait()
 	close(status)
 
-	for rl := range status {
-		fmt.Println(rl)
-	}
+	writeToCsv(status)
 }
 
 //Count how many adds are in total
@@ -77,4 +76,20 @@ func getXMLRules(filepath string) Rules {
 	}
 
 	return r
+}
+
+func writeToCsv(status chan string) {
+	f, err := os.Create("results.csv")
+	defer f.Close()
+
+	if err != nil {
+		panic(err)
+	}
+
+	w := bufio.NewWriter(f)
+	for s := range status {
+		w.WriteString(s + "\n")
+	}
+
+	w.Flush()
 }

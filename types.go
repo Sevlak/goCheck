@@ -15,13 +15,13 @@ func (c *Client) checkUrl(pattern, action string, status chan string, wg *sync.W
 	defer wg.Done()
 	resp, err := c.Get("https://" + pattern)
 	if err != nil {
-		status <- fmt.Sprintf("%s;%s;%s;%s", pattern, "TIMEOUT", "TIMEOUT", action)
+		status <- fmt.Sprintf("%s,%s,%s,%s", pattern, "TIMEOUT", "TIMEOUT", action)
 		return
 	}
 	defer resp.Body.Close()
 
 	found := resp.Request.URL.String()
-	status <- fmt.Sprintf("%s;%s;%s;%s", pattern, resp.Status, found, action)
+	status <- fmt.Sprintf("%s,%s,%s,%s", pattern, resp.Status, found, action)
 }
 
 type Rules struct {
