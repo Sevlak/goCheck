@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/xml"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -10,13 +11,26 @@ import (
 	"time"
 )
 
-var TIMEOUT time.Duration = 30 * time.Second
+var timeout int
+var file string
 var wg sync.WaitGroup
 
+func init() {
+	flag.IntVar(&timeout, "timeout", 60, "sets the timeout for the request")
+	flag.StringVar(&file, "filename", "", "sspecifies the .xml file to be checked")
+}
+
 func main() {
+	flag.Parse()
+
+	if file == "" {
+		fmt.Fprint(os.Stderr, "Missing filename flag. Use -filename [filename].")
+		os.Exit(2)
+	}
+
 	r := getXMLRules(os.Args[1])
-	status := make(chan string, 5000)
-	c := Client{&http.Client{Timeout: TIMEOUT}}
+	status := make(chan string, countAdds(r))
+	c := Client{&http.Client{Timeout: time.Duration(timeout) * time.Second}}
 
 	for _, rule := range r.Rules {
 		for _, add := range rule.Adds {
@@ -33,6 +47,18 @@ func main() {
 	}
 }
 
+//Count how many adds are in total
+func countAdds(r Rules) (x int) {
+	for _, rule := range r.Rules {
+		for range rule.Adds {
+			x++
+		}
+	}
+
+	return x
+}
+
+//Unmarshal the .xml file with the redirect rules
 func getXMLRules(filepath string) Rules {
 	f, err := os.Open("rulesXml.xml")
 	if err != nil {
