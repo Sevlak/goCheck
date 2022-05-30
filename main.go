@@ -29,7 +29,7 @@ func main() {
 		os.Exit(2)
 	}
 
-	r := getXMLRules(os.Args[1])
+	r := getXMLRules(file)
 	status := make(chan string, countAdds(r))
 	c := Client{&http.Client{Timeout: time.Duration(timeout) * time.Second}}
 
@@ -59,7 +59,7 @@ func countAdds(r Rules) (x int) {
 
 //Unmarshal the .xml file with the redirect rules
 func getXMLRules(filepath string) Rules {
-	f, err := os.Open("rulesXml.xml")
+	f, err := os.Open(filepath)
 	if err != nil {
 		panic(err)
 	}
