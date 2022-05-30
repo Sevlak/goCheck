@@ -11,6 +11,13 @@ type Client struct {
 	*http.Client
 }
 
+type Link struct {
+	Pattern  string
+	Status   string
+	Found    string
+	Expected string
+}
+
 func (c *Client) checkUrl(pattern, action string, status chan string, wg *sync.WaitGroup) {
 	defer wg.Done()
 	resp, err := c.Get("https://" + pattern)

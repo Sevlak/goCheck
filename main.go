@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/csv"
 	"encoding/xml"
 	"flag"
 	"fmt"
@@ -14,11 +15,13 @@ import (
 
 var timeout int
 var file string
+var filter bool
 var wg sync.WaitGroup
 
 func init() {
 	flag.IntVar(&timeout, "timeout", 60, "sets the timeout for the request in seconds")
-	flag.StringVar(&file, "filename", "", "sspecifies the .xml file to be checked")
+	flag.StringVar(&file, "filename", "", "specifies the .xml file to be checked")
+	flag.BoolVar(&filter, "filter", false, "filter results where the found url doesn't match the expected url")
 }
 
 func main() {
@@ -44,6 +47,10 @@ func main() {
 	close(status)
 
 	writeToCsv(status)
+
+	if filter {
+		createFilteredCsv()
+	}
 }
 
 //Count how many adds are in total
@@ -60,15 +67,11 @@ func countAdds(r Rules) (x int) {
 //Unmarshal the .xml file with the redirect rules
 func getXMLRules(filepath string) Rules {
 	f, err := os.Open(filepath)
-	if err != nil {
-		panic(err)
-	}
+	check(err)
 	defer f.Close()
 
 	data, err := ioutil.ReadAll(f)
-	if err != nil {
-		panic(err)
-	}
+	check(err)
 
 	var r Rules
 	if err := xml.Unmarshal(data, &r); err != nil {
@@ -82,9 +85,7 @@ func writeToCsv(status chan string) {
 	f, err := os.Create("results.csv")
 	defer f.Close()
 
-	if err != nil {
-		panic(err)
-	}
+	check(err)
 
 	w := bufio.NewWriter(f)
 	w.WriteString("pattern,status,urlfound,urlexpected\n") //csv headers
@@ -93,4 +94,47 @@ func writeToCsv(status chan string) {
 	}
 
 	w.Flush()
+}
+
+func filterWrongRedirects(filepath string) []Link {
+	f, err := os.Open(filepath)
+	check(err)
+
+	r := csv.NewReader(f)
+	r.FieldsPerRecord = 4
+
+	results, err := r.ReadAll()
+	check(err)
+
+	f.Close()
+
+	var wrong []Link
+	for _, line := range results {
+		if line[2] != line[3] {
+			wrong = append(wrong, Link{Pattern: line[0], Status: line[1],
+				Found: line[2], Expected: line[3]})
+		}
+	}
+
+	return wrong
+}
+
+func createFilteredCsv() {
+	wrong := filterWrongRedirects("results.csv")
+	f, err := os.Create("filtered_results.csv")
+	check(err)
+
+	w := csv.NewWriter(f)
+	for _, record := range wrong {
+		err = w.Write([]string{record.Pattern, record.Status, record.Found, record.Expected})
+		check(err)
+	}
+
+	w.Flush()
+}
+
+func check(err error) {
+	if err != nil {
+		panic(err)
+	}
 }
