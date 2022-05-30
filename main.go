@@ -110,7 +110,7 @@ func filterWrongRedirects(filepath string) []Link {
 
 	var wrong []Link
 	for _, line := range results {
-		if line[2] != line[3] {
+		if line[2] != line[3] && line[1] != "404 Status Not Found" {
 			wrong = append(wrong, Link{Pattern: line[0], Status: line[1],
 				Found: line[2], Expected: line[3]})
 		}
