@@ -87,6 +87,7 @@ func writeToCsv(status chan string) {
 	}
 
 	w := bufio.NewWriter(f)
+	w.WriteString("pattern;status;urlfound;urlexpected\n") //csv headers
 	for s := range status {
 		w.WriteString(s + "\n")
 	}
